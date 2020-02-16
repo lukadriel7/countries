@@ -3,8 +3,7 @@
 # Countries GraphQL API
 
 [![Build Status](https://github.com/trevorblades/countries/workflows/Node%20CI/badge.svg)](https://github.com/trevorblades/countries/actions)
-[![Donate](https://img.shields.io/beerpay/trevorblades/countries.svg)](https://beerpay.io/trevorblades/countries)
-
+[![Netlify Status](https://api.netlify.com/api/v1/badges/ff825b5e-72a5-4647-885f-38ca45adb55d/deploy-status)](https://app.netlify.com/sites/unruffled-shaw-bb9a4f/deploys)
 
 A public GraphQL API for information about countries, continents, and languages. This project uses [Countries List](https://annexare.github.io/Countries/) as a data source, so the schema follows the shape of that data, with a few exceptions:
 
@@ -57,6 +56,7 @@ Check out [the playground](https://countries.trevorblades.com) to explore the sc
 - [React Native](https://github.com/muhzi4u/country-directory-app)
 - [ReasonML](https://medium.com/@idkjs/reasonml-and-graphql-without-graphql-part-1-192c2e9e349c)
 - [Country quiz app](https://github.com/byrichardpowell/Country-Quiz) (React, TypeScript)
+- [Python](./examples/python)
 
 ## License
 
