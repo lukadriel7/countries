@@ -1,128 +1,181 @@
+const sift = require('sift');
 const provinces = require('provinces');
 const {ApolloServer, gql} = require('apollo-server');
 const {continents, countries, languages} = require('countries-list');
 
 const typeDefs = gql`
   type Continent {
-    code: String
-    name: String
-    countries: [Country]
+    code: ID!
+    name: String!
+    countries: [Country!]!
   }
 
   type Country {
-    code: String
-    name: String
-    native: String
-    phone: String
-    continent: Continent
+    code: ID!
+    name: String!
+    native: String!
+    phone: String!
+    continent: Continent!
+    capital: String
     currency: String
-    languages: [Language]
-    emoji: String
-    emojiU: String
-    states: [State]
+    languages: [Language!]!
+    emoji: String!
+    emojiU: String!
+    states: [State!]!
   }
 
   type State {
     code: String
-    name: String
-    country: Country
+    name: String!
+    country: Country!
   }
 
   type Language {
-    code: String
+    code: ID!
     name: String
     native: String
-    rtl: Int
+    rtl: Boolean!
+  }
+
+  input StringQueryOperatorInput {
+    eq: String
+    ne: String
+    in: [String]
+    nin: [String]
+    regex: String
+    glob: String
+  }
+
+  input CountryFilterInput {
+    code: StringQueryOperatorInput
+    currency: StringQueryOperatorInput
+    continent: StringQueryOperatorInput
+  }
+
+  input ContinentFilterInput {
+    code: StringQueryOperatorInput
+  }
+
+  input LanguageFilterInput {
+    code: StringQueryOperatorInput
   }
 
   type Query {
-    continents: [Continent]
-    continent(code: String): Continent
-    countries: [Country]
-    country(code: String): Country
-    languages: [Language]
-    language(code: String): Language
+    continents(filter: ContinentFilterInput): [Continent!]!
+    continent(code: ID!): Continent
+    countries(filter: CountryFilterInput): [Country!]!
+    country(code: ID!): Country
+    languages(filter: LanguageFilterInput): [Language!]!
+    language(code: ID!): Language
   }
 `;
 
+function filterToSift(filter = {}) {
+  return sift(
+    Object.entries(filter).reduce(
+      (acc, [key, operators]) => ({
+        ...acc,
+        [key]: operatorsToSift(operators)
+      }),
+      {}
+    )
+  );
+}
+
+function operatorsToSift(operators) {
+  return Object.entries(operators).reduce(
+    (acc, [operator, value]) => ({
+      ...acc,
+      ['$' + operator]: value
+    }),
+    {}
+  );
+}
+
 const resolvers = {
   Country: {
-    continent({continent}) {
-      return {
-        code: continent,
-        name: continents[continent]
-      };
-    },
-    languages(country) {
-      return country.languages.map(code => {
+    capital: country => country.capital || null,
+    currency: country => country.currency || null,
+    continent: ({continent}) => ({
+      code: continent,
+      name: continents[continent]
+    }),
+    languages: country =>
+      country.languages.map(code => {
         const language = languages[code];
         return {
           ...language,
           code
         };
-      });
-    },
-    states(country) {
-      return provinces.filter(province => province.country === country.code);
-    }
+      }),
+    states: country =>
+      provinces.filter(province => province.country === country.code)
   },
   State: {
-    code(state) {
-      return state.short;
-    },
-    country(state) {
-      return countries[state.country];
-    }
+    code: state => state.short,
+    country: state => countries[state.country]
   },
   Continent: {
-    countries(continent) {
-      return Object.entries(countries)
+    countries: continent =>
+      Object.entries(countries)
         .filter(entry => entry[1].continent === continent.code)
         .map(([code, country]) => ({
           ...country,
           code
-        }));
-    }
+        }))
+  },
+  Language: {
+    rtl: language => Boolean(language.rtl)
   },
   Query: {
     continent(parent, {code}) {
-      return {
-        code,
-        name: continents[code]
-      };
+      const name = continents[code];
+      return (
+        name && {
+          code,
+          name
+        }
+      );
     },
-    continents() {
-      return Object.entries(continents).map(([code, name]) => ({
-        code,
-        name
-      }));
-    },
+    continents: (parent, {filter}) =>
+      Object.entries(continents)
+        .map(([code, name]) => ({
+          code,
+          name
+        }))
+        .filter(filterToSift(filter)),
     country(parent, {code}) {
       const country = countries[code];
-      return {
-        ...country,
-        code
-      };
+      return (
+        country && {
+          ...country,
+          code
+        }
+      );
     },
-    countries() {
-      return Object.entries(countries).map(([code, country]) => ({
-        ...country,
-        code
-      }));
-    },
+    countries: (parent, {filter}) =>
+      Object.entries(countries)
+        .map(([code, country]) => ({
+          ...country,
+          code
+        }))
+        .filter(filterToSift(filter)),
     language(parent, {code}) {
       const language = languages[code];
-      return {
-        ...language,
-        code
-      };
+      return (
+        language && {
+          ...language,
+          code
+        }
+      );
     },
-    languages() {
-      return Object.entries(languages).map(([code, language]) => ({
-        ...language,
-        code
-      }));
-    }
+    languages: (parent, {filter}) =>
+      Object.entries(languages)
+        .map(([code, language]) => ({
+          ...language,
+          code
+        }))
+        .filter(filterToSift(filter))
   }
 };
 
@@ -136,6 +189,6 @@ const server = new ApolloServer({
   }
 });
 
-server.listen({port: process.env.PORT}).then(({url}) => {
+server.listen({port: process.env.PORT || 4000}).then(({url}) => {
   console.log(`🚀  Server ready at ${url}`);
 });
